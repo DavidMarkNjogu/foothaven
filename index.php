@@ -7,11 +7,6 @@ $sql = "SELECT * FROM products ORDER BY created_at DESC LIMIT 6";
 $stmt = $conn->query($sql);
 $products = $stmt->fetchAll();
 
-if ($result) {
-    while ($row = mysqli_fetch_assoc($result)) {
-        $products[] = $row;
-    }
-}
 ?>
 
 <section class="hero">

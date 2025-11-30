@@ -9,7 +9,8 @@ $product_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $sql = "SELECT * FROM products WHERE id = $product_id LIMIT 1";
 // PDO Prepared Statement (Safer)
 $stmt = $conn->prepare($sql);
-$stmt->execute([$product_id]);
+$stmt->bindValue(':id', $product_id, PDO::PARAM_INT);
+$stmt->execute();
 $product = $stmt->fetch();
 // Redirect if not found
 if (!$product) {
