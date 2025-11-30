@@ -2,18 +2,16 @@
 // product.php
 include 'header.php';
 
-// Get Product ID safely
 $product_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
-// Fetch Product Data
-$sql = "SELECT * FROM products WHERE id = $product_id LIMIT 1";
-// PDO Prepared Statement (Safer)
-$stmt = $conn->prepare($sql);
+// FIX: Use Named Parameters (:id) to prevent SQLite Driver Crash
+$stmt = $conn->prepare("SELECT * FROM products WHERE id = :id LIMIT 1");
 $stmt->bindValue(':id', $product_id, PDO::PARAM_INT);
 $stmt->execute();
-$product = $stmt->fetch();
-// Redirect if not found
+$product = $stmt->fetch(PDO::FETCH_ASSOC);
+
 if (!$product) {
+    // If ID=1 is not in the database, this redirects to home
     header("Location: index.php");
     exit();
 }
@@ -23,12 +21,8 @@ $msg = "";
 if (isset($_POST['add_to_cart'])) {
     $qty = (int)$_POST['quantity'];
     
-    // Initialize cart if not exists
-    if (!isset($_SESSION['cart'])) {
-        $_SESSION['cart'] = [];
-    }
+    if (!isset($_SESSION['cart'])) { $_SESSION['cart'] = []; }
 
-    // Add or Update quantity
     if (isset($_SESSION['cart'][$product_id])) {
         $_SESSION['cart'][$product_id] += $qty;
     } else {
@@ -36,7 +30,6 @@ if (isset($_POST['add_to_cart'])) {
     }
     
     $msg = "Added to cart!";
-    // Refresh to update header count immediately
     header("Refresh:0"); 
 }
 ?>
@@ -54,10 +47,10 @@ if (isset($_POST['add_to_cart'])) {
             <img src="<?php echo $product['image_main']; ?>" style="width:100%; border-radius:8px; margin-bottom:10px;">
             
             <div class="thumbnails" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:10px;">
-                <img src="<?php echo $product['image_top'] ?? 'https://picsum.photos/100'; ?>" style="width:100%; border-radius:4px;">
-                <img src="<?php echo $product['image_bottom'] ?? 'https://picsum.photos/100'; ?>" style="width:100%; border-radius:4px;">
-                <img src="<?php echo $product['image_side'] ?? 'https://picsum.photos/100'; ?>" style="width:100%; border-radius:4px;">
-                <img src="<?php echo $product['image_back'] ?? 'https://picsum.photos/100'; ?>" style="width:100%; border-radius:4px;">
+                <img src="<?php echo $product['image_top'] ?? 'https://via.placeholder.com/100'; ?>" style="width:100%; border-radius:4px;">
+                <img src="<?php echo $product['image_bottom'] ?? 'https://via.placeholder.com/100'; ?>" style="width:100%; border-radius:4px;">
+                <img src="<?php echo $product['image_side'] ?? 'https://via.placeholder.com/100'; ?>" style="width:100%; border-radius:4px;">
+                <img src="<?php echo $product['image_back'] ?? 'https://via.placeholder.com/100'; ?>" style="width:100%; border-radius:4px;">
             </div>
         </div>
 

@@ -11,19 +11,18 @@ if (!isset($_SESSION['admin_id'])) {
 
 $role = $_SESSION['admin_role']; // 'owner' or 'staff'
 
-// --- 1. DATA FETCHING ---
+// --- 1. DATA FETCHING (PDO) ---
 
-// A. Fetch Orders (For Everyone)
-$sql_orders = "SELECT * FROM orders ORDER BY order_date DESC LIMIT 50";
-$result_orders = mysqli_query($conn, $sql_orders);
+// A. Fetch Orders
+$stmt = $conn->query("SELECT * FROM orders ORDER BY order_date DESC LIMIT 50");
+$orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // B. Calculate Financials (OWNER ONLY)
 $revenue = 0;
 $total_profit = 0;
 
 if ($role == 'owner') {
-    // This query joins items with products to calculate profit
-    // Profit = (Selling Price - Buying Price) * Quantity
+    // SQLite Compatible Join Query
     $sql_profit = "
         SELECT 
             SUM(oi.price_at_purchase * oi.quantity) as revenue,
@@ -34,8 +33,8 @@ if ($role == 'owner') {
         WHERE o.status != 'cancelled'
     ";
     
-    $result_fin = mysqli_query($conn, $sql_profit);
-    $fin_data = mysqli_fetch_assoc($result_fin);
+    $stmt_fin = $conn->query($sql_profit);
+    $fin_data = $stmt_fin->fetch(PDO::FETCH_ASSOC);
     
     $revenue = $fin_data['revenue'] ?? 0;
     $total_profit = $fin_data['profit'] ?? 0;
@@ -52,30 +51,21 @@ if ($role == 'owner') {
     <style>
         :root { --primary: #111; --bg: #f4f4f4; --accent: #FF4500; }
         body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; padding: 0; }
-        
-        /* HEADER */
         .admin-header { background: var(--primary); color: white; padding: 1rem; display: flex; justify-content: space-between; align-items: center; }
         .logout { color: #ccc; text-decoration: none; font-size: 0.9rem; }
-        
         .container { max-width: 1200px; margin: 2rem auto; padding: 0 1rem; }
-        
-        /* CARDS (Owner Only) */
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
         .stat-card { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         .stat-label { color: #666; font-size: 0.9rem; display: block; margin-bottom: 0.5rem; }
         .stat-value { font-size: 1.8rem; font-weight: 800; color: var(--primary); }
         .stat-value.green { color: #28a745; }
-        
-        /* TABLE */
         .table-wrapper { overflow-x: auto; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        table { width: 100%; border-collapse: collapse; min-width: 600px; } /* Min-width forces scroll on mobile */
+        table { width: 100%; border-collapse: collapse; min-width: 600px; }
         th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #eee; }
         th { background: #f9f9f9; font-weight: 600; }
         .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; text-transform: uppercase; font-weight: bold; }
         .badge-pending { background: #fff3cd; color: #856404; }
         .badge-completed { background: #d4edda; color: #155724; }
-
-        /* HIDE FROM STAFF */
         .owner-only { display: <?php echo ($role === 'owner') ? 'block' : 'none'; ?>; }
     </style>
 </head>
@@ -92,7 +82,6 @@ if ($role == 'owner') {
 </div>
 
 <div class="container">
-    
     <div class="owner-only">
         <h2 style="margin-bottom:1rem;">Financial Overview</h2>
         <div class="stats-grid">
@@ -124,11 +113,10 @@ if ($role == 'owner') {
                     <th>Location</th>
                     <th>Total</th>
                     <th>Status</th>
-                    <th>Action</th>
                 </tr>
             </thead>
             <tbody>
-                <?php while($order = mysqli_fetch_assoc($result_orders)): ?>
+                <?php foreach($orders as $order): ?>
                     <tr>
                         <td>#<?php echo $order['id']; ?></td>
                         <td><?php echo htmlspecialchars($order['customer_name'] ?: 'Guest'); ?></td>
@@ -144,11 +132,8 @@ if ($role == 'owner') {
                                 <?php echo $order['status']; ?>
                             </span>
                         </td>
-                        <td>
-                            <a href="#" style="font-size:0.85rem; color:#666;">View</a>
-                        </td>
                     </tr>
-                <?php endwhile; ?>
+                <?php endforeach; ?>
             </tbody>
         </table>
     </div>

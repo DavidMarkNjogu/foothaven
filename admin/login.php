@@ -1,20 +1,23 @@
 <?php
 // admin/login.php
 session_start();
-// Fix path: we are in 'admin' folder, so we go up one level to find db.php
 require_once '../db.php'; 
 
 $error = '';
 
 if (isset($_POST['login'])) {
-    $username = mysqli_real_escape_string($conn, $_POST['username']);
-    $password = mysqli_real_escape_string($conn, $_POST['password']); // Plain text for MVP
+    $username = trim($_POST['username']);
+    $password = $_POST['password'];
 
-    $sql = "SELECT * FROM admin_users WHERE username = '$username' AND password = '$password'";
-    $result = mysqli_query($conn, $sql);
+    // PDO PREPARED STATEMENT (SQLite Compatible)
+    $stmt = $conn->prepare("SELECT * FROM admin_users WHERE username = :user");
+    $stmt->bindValue(':user', $username, PDO::PARAM_STR);
+    $stmt->execute();
     
-    if (mysqli_num_rows($result) == 1) {
-        $user = mysqli_fetch_assoc($result);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    // Simple password check for MVP (In production use password_verify)
+    if ($user && $user['password'] === $password) {
         $_SESSION['admin_id'] = $user['id'];
         $_SESSION['admin_role'] = $user['role'];
         $_SESSION['admin_name'] = $user['username'];
