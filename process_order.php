@@ -21,10 +21,10 @@ $order_items = [];
 $cart_ids = implode(',', array_keys($_SESSION['cart']));
 
 if ($cart_ids) {
-    $sql_products = "SELECT * FROM products WHERE id IN ($cart_ids)";
-    $result_products = mysqli_query($conn, $sql_products);
+    $stmt = $conn->query("SELECT * FROM products WHERE id IN ($cart_ids)");
+    $products = $stmt->fetchAll();
     
-    while ($product = mysqli_fetch_assoc($result_products)) {
+    foreach ($products as $product){
         $qty = $_SESSION['cart'][$product['id']];
         // Check stock availability
         if ($product['stock_level'] < $qty) {
@@ -45,62 +45,52 @@ if ($cart_ids) {
 
 // B. Calculate Shipping
 $shipping_cost = 0;
-$sql_loc = "SELECT shipping_cost FROM locations WHERE id = $location_id";
-$result_loc = mysqli_query($conn, $sql_loc);
-if ($row = mysqli_fetch_assoc($result_loc)) {
-    $shipping_cost = $row['shipping_cost'];
-} else {
-    die("Invalid Location Selected");
-}
+$stmt_loc = $conn->prepare("SELECT shipping_cost FROM locations WHERE id = ?");
+$stmt_loc->execute([$location_id]);
+$loc = $stmt_loc->fetch();
 
+if (!$loc) { die("Invalid Location"); }
+$shipping_cost = $loc['shipping_cost'];
+$grand_total = $product_total + $shipping_cost;
 // C. Final Total
 $grand_total = $product_total + $shipping_cost;
 
 // 4. Database Transaction: Insert Order
 // Use a transaction to ensure both Order and Items are saved, or neither
-mysqli_begin_transaction($conn);
-
+// --- TRANSACTION ---
 try {
-    // Insert into orders table
+    $conn->beginTransaction();
+
+    // 1. Insert Order
     $sql_order = "INSERT INTO orders (customer_name, customer_phone, location_id, total_product_cost, shipping_cost, total_amount, status) 
-                  VALUES ('$name', '$phone', '$location_id', '$product_total', '$shipping_cost', '$grand_total', 'pending')";
+                  VALUES (?, ?, ?, ?, ?, ?, 'pending')";
+    $stmt_order = $conn->prepare($sql_order);
+    $stmt_order->execute([$name, $phone, $location_id, $product_total, $shipping_cost, $grand_total]);
     
-    if (!mysqli_query($conn, $sql_order)) {
-        throw new Exception("Order Error: " . mysqli_error($conn));
-    }
-    
-    $order_id = mysqli_insert_id($conn);
+    $order_id = $conn->lastInsertId();
 
-    // Insert Order Items and Deduct Stock
+    // 2. Insert Items & Update Stock
+    $sql_item = "INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase) VALUES (?, ?, ?, ?)";
+    $stmt_item = $conn->prepare($sql_item);
+
+    $sql_stock = "UPDATE products SET stock_level = stock_level - ? WHERE id = ?";
+    $stmt_stock = $conn->prepare($sql_stock);
+
     foreach ($order_items as $item) {
-        $pid = $item['id'];
-        $price = $item['price'];
-        $qty = $item['qty'];
-        
         // Insert Item
-        $sql_item = "INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase) 
-                     VALUES ('$order_id', '$pid', '$qty', '$price')";
-        if (!mysqli_query($conn, $sql_item)) {
-            throw new Exception("Item Error: " . mysqli_error($conn));
-        }
-        
+        $stmt_item->execute([$order_id, $item['id'], $item['qty'], $item['price']]);
         // Update Stock
-        $sql_stock = "UPDATE products SET stock_level = stock_level - $qty WHERE id = $pid";
-        if (!mysqli_query($conn, $sql_stock)) {
-            throw new Exception("Stock Error: " . mysqli_error($conn));
-        }
+        $stmt_stock->execute([$item['qty'], $item['id']]);
     }
 
-    // Commit Transaction
-    mysqli_commit($conn);
+    $conn->commit();
 
-    // 5. Success! Clear Cart and Redirect
     unset($_SESSION['cart']);
     header("Location: success.php?order=$order_id");
     exit();
 
 } catch (Exception $e) {
-    mysqli_rollback($conn);
+    $conn->rollBack();
     die("Transaction Failed: " . $e->getMessage());
 }
 ?>

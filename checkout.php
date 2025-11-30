@@ -11,15 +11,16 @@ if (empty($_SESSION['cart'])) {
 // Calculate Subtotal (Server Side)
 $subtotal = 0;
 $ids = implode(',', array_keys($_SESSION['cart']));
+
 $sql_cart = "SELECT id, selling_price FROM products WHERE id IN ($ids)";
-$result_cart = mysqli_query($conn, $sql_cart);
-while ($row = mysqli_fetch_assoc($result_cart)) {
+$stmt_cart = $conn->query($sql_cart);
+while ($row = $stmt_cart->fetch()) {
     $subtotal += $row['selling_price'] * $_SESSION['cart'][$row['id']];
 }
 
 // Fetch Locations for Dropdown
-$sql_loc = "SELECT * FROM locations ORDER BY town_name ASC";
-$result_loc = mysqli_query($conn, $sql_loc);
+$stmt_loc = $conn->query("SELECT * FROM locations ORDER BY town_name ASC");
+$locations = $stmt_loc->fetchAll();
 ?>
 
 <div class="container">

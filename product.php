@@ -7,9 +7,10 @@ $product_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
 // Fetch Product Data
 $sql = "SELECT * FROM products WHERE id = $product_id LIMIT 1";
-$result = mysqli_query($conn, $sql);
-$product = mysqli_fetch_assoc($result);
-
+// PDO Prepared Statement (Safer)
+$stmt = $conn->prepare($sql);
+$stmt->execute([$product_id]);
+$product = $stmt->fetch();
 // Redirect if not found
 if (!$product) {
     header("Location: index.php");

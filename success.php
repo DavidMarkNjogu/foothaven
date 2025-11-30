@@ -9,10 +9,11 @@ if ($order_id == 0) {
     exit();
 }
 
+
 // Fetch Order Details for display
-$sql = "SELECT * FROM orders WHERE id = $order_id";
-$result = mysqli_query($conn, $sql);
-$order = mysqli_fetch_assoc($result);
+$stmt = $conn->prepare("SELECT * FROM orders WHERE id = ?");
+$stmt->execute([$order_id]);
+$order = $stmt->fetch();
 
 if (!$order) {
     die("Order not found.");

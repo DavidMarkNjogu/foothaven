@@ -1,18 +1,18 @@
 [package]
-name = "davinjiski/foothaven" # Change 'yourusername' to your Wasmer username
+name = "davinjiski/foothaven"
 version = "0.1.0"
-description = "Foothaven Shoe Store MVP"
+description = "Foothaven MVP"
 
 [dependencies]
-"php/php" = "8.2"  # This pulls the PHP runtime
+"php/php" = "8.2"
 
 [fs]
-"/app" = "."       # Maps your current folder to /app in the container
+"/app" = "."
 
 [[runner]]
 alias = "server"
 command = "php"
-args = ["-S", "0.0.0.0:8080", "-t", "/app"] # Starts PHP built-in server
+args = ["-S", "0.0.0.0:8080", "-t", "/app"]
 
 [http]
 port = 8080

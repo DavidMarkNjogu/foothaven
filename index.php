@@ -4,8 +4,8 @@ include 'header.php'; // Ensure header.php includes db.php
 
 // Fetch latest products
 $sql = "SELECT * FROM products ORDER BY created_at DESC LIMIT 6";
-$result = mysqli_query($conn, $sql);
-$products = [];
+$stmt = $conn->query($sql);
+$products = $stmt->fetchAll();
 
 if ($result) {
     while ($row = mysqli_fetch_assoc($result)) {

@@ -21,9 +21,10 @@ if (isset($_SESSION['cart']) && !empty($_SESSION['cart'])) {
     // Safety check for SQL injection (ensure only numbers)
     if (!empty($ids)) {
         $sql = "SELECT * FROM products WHERE id IN ($ids)";
-        $result = mysqli_query($conn, $sql);
+        $stmt = $conn->query($sql);
+        $product = $stmt->fetchAll();
         
-        while ($row = mysqli_fetch_assoc($result)) {
+        foreach ($products as $row) {
             $qty = $_SESSION['cart'][$row['id']];
             $row['qty'] = $qty;
             $row['line_total'] = $qty * $row['selling_price'];
